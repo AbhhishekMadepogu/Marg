@@ -1,0 +1,18 @@
+export const themeColors = {
+  primary: '#3355FF',
+  navy: '#151A45',
+  subtitle: '#7683A6',
+  border: '#E1E4F0',
+  placeholder: '#9AA3C0',
+  infoBg: '#EEF1FE',
+  infoText: '#46557A',
+  white: '#FFFFFF',
+  black: '#000000',
+  primaryDisabled: '#A9B8FF',
+  success: '#22C55E',
+  successBg: '#E6F9EE',
+  warning: '#F5A623',
+  warningBg: '#FFF4E1',
+  danger: '#EF4444',
+  dangerBg: '#FDECEC',
+};
