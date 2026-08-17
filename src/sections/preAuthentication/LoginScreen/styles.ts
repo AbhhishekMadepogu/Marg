@@ -223,4 +223,10 @@ export default StyleSheet.create({
         fontWeight: '700',
         color: colors.primary,
     },
+    errorText: {
+        marginTop: moderateScale(12),
+        fontSize: moderateScale(13),
+        color: colors.danger,
+        textAlign: 'center',
+    },
 });

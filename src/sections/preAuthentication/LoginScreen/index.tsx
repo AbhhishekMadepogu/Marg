@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LockIcon from '../../../assets/icons/lock';
 import margLogo from '../../../assets/icons/margLogo';
+import { useAuth } from '../../../hooks/useAuth';
 import { appString } from '../../../utility/constants/appString';
 import { themeColors } from '../../../utility/constants/themeColors';
 import styles, { ICON_SIZE } from './styles';
@@ -38,10 +39,13 @@ export default function LoginScreen() {
     const [focusedOtpIndex, setFocusedOtpIndex] = useState<number | null>(null);
     const [secondsLeft, setSecondsLeft] = useState(RESEND_OTP_SECONDS);
     const [resendKey, setResendKey] = useState(0);
+    const [apiError, setApiError] = useState<string | null>(null);
     const otpInputRefs = useRef<Array<TextInput | null>>([]);
+    const { requestOtp, login, isRequestingOtp, isLoggingIn } = useAuth();
 
     const isMobileNumberValid = mobileNumber.length === MOBILE_NUMBER_LENGTH;
     const isOtpComplete = otp.every(digit => digit !== '');
+    const fullPhoneNumber = `${mobileNumber}`;
 
     useEffect(() => {
         if (!otpSent) {
@@ -66,22 +70,32 @@ export default function LoginScreen() {
         }
     }, [otpSent]);
 
-    const handleSendOtp = () => {
+    const handleSendOtp = async () => {
         if (!isMobileNumberValid) {
             return;
         }
-        // TODO: call send-OTP API
-        setOtp(Array(OTP_LENGTH).fill(''));
-        setOtpSent(true);
+        setApiError(null);
+        try {
+            await requestOtp(fullPhoneNumber);
+            setOtp(Array(OTP_LENGTH).fill(''));
+            setOtpSent(true);
+        } catch (error) {
+            setApiError(error instanceof Error ? error.message : 'Failed to send OTP.');
+        }
     };
 
-    const handleResendOtp = () => {
+    const handleResendOtp = async () => {
         if (secondsLeft > 0) {
             return;
         }
-        // TODO: call resend-OTP API
-        setOtp(Array(OTP_LENGTH).fill(''));
-        setResendKey(prev => prev + 1);
+        setApiError(null);
+        try {
+            await requestOtp(fullPhoneNumber);
+            setOtp(Array(OTP_LENGTH).fill(''));
+            setResendKey(prev => prev + 1);
+        } catch (error) {
+            setApiError(error instanceof Error ? error.message : 'Failed to resend OTP.');
+        }
     };
 
     const handleOtpChange = (text: string, index: number) => {
@@ -105,11 +119,17 @@ export default function LoginScreen() {
         }
     };
 
-    const handleVerifyOtp = () => {
+    const handleVerifyOtp = async () => {
         if (!isOtpComplete) {
             return;
         }
-        // TODO: call verify-OTP API
+        setApiError(null);
+        try {
+            await login(fullPhoneNumber, otp.join(''));
+            // AppStack switches to PostAuthenticationTabs automatically once isAuthenticated flips true.
+        } catch (error) {
+            setApiError(error instanceof Error ? error.message : 'Invalid or expired OTP.');
+        }
     };
 
     return (
@@ -178,12 +198,19 @@ export default function LoginScreen() {
                                 )}
                             </View>
 
+                            {apiError ? <Text style={styles.errorText}>{apiError}</Text> : null}
+
                             <TouchableOpacity
-                                style={[styles.sendButton, !isOtpComplete && styles.sendButtonDisabled]}
+                                style={[
+                                    styles.sendButton,
+                                    (!isOtpComplete || isLoggingIn) && styles.sendButtonDisabled,
+                                ]}
                                 activeOpacity={0.85}
-                                disabled={!isOtpComplete}
+                                disabled={!isOtpComplete || isLoggingIn}
                                 onPress={handleVerifyOtp}>
-                                <Text style={styles.sendButtonText}>{appString.loginScreen.loginButton}</Text>
+                                <Text style={styles.sendButtonText}>
+                                    {isLoggingIn ? 'Verifying…' : appString.loginScreen.loginButton}
+                                </Text>
                             </TouchableOpacity>
                         </>
                     ) : (
@@ -217,12 +244,19 @@ export default function LoginScreen() {
                                 <Text style={styles.infoText}>{appString.loginScreen.otpInfo}</Text>
                             </View>
 
+                            {apiError ? <Text style={styles.errorText}>{apiError}</Text> : null}
+
                             <TouchableOpacity
-                                style={[styles.sendButton, !isMobileNumberValid && styles.sendButtonDisabled]}
+                                style={[
+                                    styles.sendButton,
+                                    (!isMobileNumberValid || isRequestingOtp) && styles.sendButtonDisabled,
+                                ]}
                                 activeOpacity={0.85}
-                                disabled={!isMobileNumberValid}
+                                disabled={!isMobileNumberValid || isRequestingOtp}
                                 onPress={handleSendOtp}>
-                                <Text style={styles.sendButtonText}>{appString.loginScreen.sendOtpButton}</Text>
+                                <Text style={styles.sendButtonText}>
+                                    {isRequestingOtp ? 'Sending…' : appString.loginScreen.sendOtpButton}
+                                </Text>
                             </TouchableOpacity>
                         </>
                     )}

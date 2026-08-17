@@ -2,9 +2,6 @@ import { StyleSheet } from 'react-native';
 import { moderateScale } from 'react-native-size-matters';
 import { themeColors as colors } from '../../../utility/constants/themeColors';
 
-const LOGO_WIDTH = moderateScale(110);
-const LOGO_HEIGHT = LOGO_WIDTH * (255 / 775);
-
 export default StyleSheet.create({
     container: {
         flex: 1,
@@ -13,23 +10,6 @@ export default StyleSheet.create({
     scrollContent: {
         flexGrow: 1,
         paddingBottom: moderateScale(24),
-    },
-    heroImage: {
-        height: moderateScale(210),
-        width: '100%',
-    },
-    heroContent: {
-        paddingHorizontal: moderateScale(20),
-        paddingTop: moderateScale(8),
-    },
-    headerRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-    },
-    logoImage: {
-        width: LOGO_WIDTH,
-        height: LOGO_HEIGHT,
     },
     bellButton: {
         width: moderateScale(36),
@@ -50,7 +30,7 @@ export default StyleSheet.create({
         color: colors.subtitle,
     },
     content: {
-        paddingHorizontal: moderateScale(20),
+        paddingHorizontal: moderateScale(12),
         paddingTop: moderateScale(20),
     },
     greeting: {
@@ -75,6 +55,14 @@ export default StyleSheet.create({
         borderRadius: moderateScale(14),
         borderWidth: moderateScale(1),
         borderColor: colors.border,
+        overflow: 'hidden',
+    },
+    statCardActiveBar: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: moderateScale(3),
     },
     statIconCircle: {
         width: moderateScale(34),
@@ -138,33 +126,80 @@ export default StyleSheet.create({
     taskList: {
         marginTop: moderateScale(14),
     },
+    emptyState: {
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: moderateScale(32),
+        paddingVertical: moderateScale(24),
+    },
+    emptyStateText: {
+        fontSize: moderateScale(13),
+        color: colors.subtitle,
+        textAlign: 'center',
+    },
+    retryButton: {
+        marginTop: moderateScale(12),
+        paddingHorizontal: moderateScale(20),
+        paddingVertical: moderateScale(10),
+        borderRadius: moderateScale(10),
+        backgroundColor: colors.primary,
+    },
+    retryButtonText: {
+        fontSize: moderateScale(13),
+        fontWeight: '700',
+        color: colors.white,
+    },
     taskCard: {
         backgroundColor: colors.white,
         borderWidth: moderateScale(1),
         borderColor: colors.border,
         borderRadius: moderateScale(14),
-        padding: moderateScale(12),
+        paddingHorizontal: moderateScale(12),
+        paddingTop: moderateScale(12),
+        paddingBottom: moderateScale(12),
         marginBottom: moderateScale(12),
+    },
+    taskCardCompact: {
+        paddingBottom: moderateScale(4),
     },
     taskCardTopRow: {
         flexDirection: 'row',
+        alignItems: 'flex-start',
     },
     taskThumb: {
-        width: moderateScale(52),
-        height: moderateScale(52),
+        width: moderateScale(64),
+        height: moderateScale(64),
         borderRadius: moderateScale(10),
         alignItems: 'center',
         justifyContent: 'center',
+        overflow: 'hidden',
         marginRight: moderateScale(12),
     },
     taskThumbEmoji: {
-        fontSize: moderateScale(22),
+        fontSize: moderateScale(26),
     },
     taskInfo: {
         flex: 1,
-        paddingRight: moderateScale(16),
+    },
+    cardBottomRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: moderateScale(12),
+    },
+    cardBottomRowCompact: {
+        marginTop: moderateScale(4),
+    },
+    cardBottomLeft: {
+        flex: 1,
+    },
+    taskTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'space-between',
     },
     taskTitle: {
+        flex: 1,
+        marginRight: moderateScale(8),
         fontSize: moderateScale(14),
         fontWeight: '700',
         color: colors.navy,
@@ -181,57 +216,129 @@ export default StyleSheet.create({
         fontSize: moderateScale(11.5),
         color: colors.subtitle,
     },
-    chevron: {
-        position: 'absolute',
-        top: moderateScale(12),
-        right: moderateScale(12),
+    overdueText: {
+        color: colors.danger,
+        fontWeight: '700',
+    },
+    viewPhotoRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: moderateScale(6),
+    },
+    viewPhotoText: {
+        fontSize: moderateScale(11.5),
+        fontWeight: '700',
+        color: colors.primary,
+    },
+    completedPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.successBg,
+        borderRadius: moderateScale(20),
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: moderateScale(4),
+    },
+    completedPillText: {
+        marginLeft: moderateScale(4),
+        fontSize: moderateScale(10.5),
+        fontWeight: '700',
+        color: colors.success,
+    },
+    inProgressPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: colors.warningBg,
+        borderRadius: moderateScale(20),
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: moderateScale(4),
+    },
+    inProgressPillText: {
+        marginLeft: moderateScale(4),
+        fontSize: moderateScale(10.5),
+        fontWeight: '700',
+        color: colors.warning,
+    },
+    navigateButton: {
+        width: moderateScale(28),
+        height: moderateScale(28),
+        borderRadius: moderateScale(14),
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.white,
+        borderWidth: moderateScale(1),
+        borderColor: colors.border,
+        shadowColor: colors.black,
+        shadowOffset: { width: 0, height: moderateScale(2) },
+        shadowOpacity: 0.12,
+        shadowRadius: moderateScale(3),
+        elevation: moderateScale(2),
+    },
+    navigateButtonCompact: {
+        width: moderateScale(22),
+        height: moderateScale(22),
+        borderRadius: moderateScale(11),
     },
     actionsRow: {
         flexDirection: 'row',
-        marginTop: moderateScale(12),
+        alignItems: 'center',
+    },
+    completeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        alignSelf: 'flex-start',
+        borderRadius: moderateScale(8),
+        paddingHorizontal: moderateScale(6),
+        paddingVertical: moderateScale(5),
+        backgroundColor: colors.primary,
+    },
+    completeButtonText: {
+        fontSize: moderateScale(10.5),
+        fontWeight: '700',
+        color: colors.white,
+        marginLeft: moderateScale(3),
     },
     acceptButton: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: moderateScale(1.5),
         borderColor: colors.success,
-        borderRadius: moderateScale(10),
-        paddingVertical: moderateScale(8),
-        marginRight: moderateScale(8),
+        borderRadius: moderateScale(7),
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: moderateScale(5),
+        marginRight: moderateScale(6),
     },
     acceptButtonText: {
-        fontSize: moderateScale(13),
+        fontSize: moderateScale(10.5),
         fontWeight: '700',
         color: colors.success,
-        marginLeft: moderateScale(4),
+        marginLeft: moderateScale(3),
     },
     rejectButton: {
-        flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: moderateScale(1.5),
         borderColor: colors.danger,
-        borderRadius: moderateScale(10),
-        paddingVertical: moderateScale(8),
+        borderRadius: moderateScale(7),
+        paddingHorizontal: moderateScale(8),
+        paddingVertical: moderateScale(5),
     },
     rejectButtonText: {
-        fontSize: moderateScale(13),
+        fontSize: moderateScale(10.5),
         fontWeight: '700',
         color: colors.danger,
-        marginLeft: moderateScale(4),
+        marginLeft: moderateScale(3),
     },
     statusBadge: {
-        marginTop: moderateScale(12),
-        alignItems: 'center',
-        paddingVertical: moderateScale(8),
-        borderRadius: moderateScale(10),
-        backgroundColor: colors.infoBg,
+        borderRadius: moderateScale(8),
+        paddingHorizontal: moderateScale(10),
+        paddingVertical: moderateScale(6),
+        backgroundColor: colors.dangerBg,
     },
     statusBadgeText: {
-        fontSize: moderateScale(13),
+        fontSize: moderateScale(11),
         fontWeight: '700',
     },
 });
