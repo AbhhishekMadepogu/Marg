@@ -37,6 +37,9 @@ export default StyleSheet.create({
         borderRadius: moderateScale(14),
         padding: moderateScale(14),
     },
+    avatarWrapper: {
+        marginRight: moderateScale(12),
+    },
     avatarCircle: {
         width: moderateScale(56),
         height: moderateScale(56),
@@ -44,7 +47,31 @@ export default StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.infoBg,
-        marginRight: moderateScale(12),
+        overflow: 'hidden',
+    },
+    avatarImage: {
+        width: '100%',
+        height: '100%',
+    },
+    avatarLoadingOverlay: {
+        ...StyleSheet.absoluteFill,
+        borderRadius: moderateScale(28),
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    },
+    cameraBadge: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: moderateScale(20),
+        height: moderateScale(20),
+        borderRadius: moderateScale(10),
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.primary,
+        borderWidth: moderateScale(2),
+        borderColor: colors.white,
     },
     profileInfo: {
         flex: 1,

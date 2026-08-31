@@ -13,6 +13,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import FA5Icon from 'react-native-vector-icons/FontAwesome5';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Hero from '../../../components/Hero';
+import { useAuth } from '../../../hooks/useAuth';
 import { useIssue, type IssueTask, type PhotoFile } from '../../../hooks/useIssue';
 import { appString } from '../../../utility/constants/appString';
 import { API_BASE_URL } from '../../../utility/constants/apiConfig';
@@ -108,6 +109,11 @@ const formatDateTime = (isoDate: string) => {
     return `${datePart}, ${timePart}`;
 };
 
+const MAX_GREETING_NAME_LENGTH = 20;
+
+const truncateName = (name: string) =>
+    name.length > MAX_GREETING_NAME_LENGTH ? `${name.slice(0, MAX_GREETING_NAME_LENGTH)}...` : name;
+
 const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const isTaskOverdue = (task: Task) => {
@@ -149,6 +155,7 @@ const mapIssueToTask = (issue: IssueTask): Task => {
 };
 
 export default function TasksScreen() {
+    const { user } = useAuth();
     const {
         getTasks,
         acceptTask,
@@ -265,6 +272,7 @@ export default function TasksScreen() {
         },
     };
     const activeFilterCopy = FILTER_COPY[activeFilter];
+    const greetingName = truncateName(user?.fullName?.trim() || appString.tasksScreen.greetingFallbackName);
     const previewTask = tasks.find(task => task.id === previewTaskId) ?? null;
 
     const setTaskStatus = (id: string, status: TaskStatus) => {
@@ -354,7 +362,11 @@ export default function TasksScreen() {
                 </Hero>
 
                 <View style={styles.content}>
-                    <Text style={styles.greeting}>{appString.tasksScreen.greeting}</Text>
+                    <Text style={styles.greeting}>
+                        {appString.tasksScreen.greetingPrefix}
+                        {greetingName}
+                        {appString.tasksScreen.greetingSuffix}
+                    </Text>
                     <Text style={styles.subtitle}>{activeFilterCopy.subtitle}</Text>
 
                     <View style={styles.statsRow}>

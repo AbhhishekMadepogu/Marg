@@ -1,15 +1,140 @@
-import React from 'react';
-import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Image,
+    Linking,
+    PermissionsAndroid,
+    Platform,
+    ScrollView,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Hero from '../../../components/Hero';
 import { useAuth } from '../../../hooks/useAuth';
+import type { PhotoFile } from '../../../hooks/useIssue';
+import { useProfile } from '../../../hooks/useProfile';
 import { appString } from '../../../utility/constants/appString';
 import { themeColors } from '../../../utility/constants/themeColors';
 import styles from './styles';
 
 export default function ProfileScreen() {
     const { user, logout } = useAuth();
+    const { isUploadingPhoto, isFetchingPhoto, uploadWorkerPhoto, getWorkerPhoto } = useProfile();
+    const [photoUri, setPhotoUri] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!user?.id) {
+            return;
+        }
+        let cancelled = false;
+        getWorkerPhoto(user.id)
+            .then(dataUri => {
+                if (!cancelled) {
+                    setPhotoUri(dataUri);
+                }
+            })
+            .catch(() => {});
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.id, getWorkerPhoto]);
+
+    const requestCameraPermission = async () => {
+        if (Platform.OS !== 'android') {
+            return true;
+        }
+        const alreadyGranted = await PermissionsAndroid.check(
+            PermissionsAndroid.PERMISSIONS.CAMERA,
+        );
+        if (alreadyGranted) {
+            return true;
+        }
+        const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.CAMERA, {
+            title: appString.profileScreen.cameraPermissionTitle,
+            message: appString.profileScreen.cameraPermissionMessage,
+            buttonPositive: appString.profileScreen.cameraPermissionAllow,
+            buttonNegative: appString.profileScreen.cancelButton,
+        });
+        if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
+            Alert.alert(
+                appString.profileScreen.cameraPermissionTitle,
+                appString.profileScreen.cameraPermissionBlockedMessage,
+                [
+                    { text: appString.profileScreen.cancelButton, style: 'cancel' },
+                    { text: appString.profileScreen.openSettingsLabel, onPress: () => Linking.openSettings() },
+                ],
+            );
+            return false;
+        }
+        return result === PermissionsAndroid.RESULTS.GRANTED;
+    };
+
+    const uploadPhoto = async (photo: PhotoFile) => {
+        try {
+            await uploadWorkerPhoto(photo);
+            setPhotoUri(photo.uri);
+        } catch (err) {
+            Alert.alert(
+                appString.profileScreen.photoUploadFailedTitle,
+                err instanceof Error ? err.message : 'Failed to upload photo.',
+            );
+        }
+    };
+
+    const handleTakePhoto = async () => {
+        const hasPermission = await requestCameraPermission();
+        if (!hasPermission) {
+            return;
+        }
+        const result = await launchCamera({ mediaType: 'photo', saveToPhotos: false, quality: 0.7 });
+        if (result.didCancel || result.errorCode) {
+            if (result.errorCode) {
+                Alert.alert('Camera error', result.errorMessage ?? 'Could not open the camera.');
+            }
+            return;
+        }
+        const asset = result.assets?.[0];
+        if (asset?.uri) {
+            const mimeType = asset.type ?? 'image/jpeg';
+            uploadPhoto({
+                uri: asset.uri,
+                type: mimeType,
+                name: asset.fileName ?? `profile-photo.${mimeType.split('/')[1] ?? 'jpg'}`,
+            });
+        }
+    };
+
+    const handleChooseFromGallery = async () => {
+        const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7 });
+        if (result.didCancel || result.errorCode) {
+            if (result.errorCode) {
+                Alert.alert('Gallery error', result.errorMessage ?? 'Could not open the gallery.');
+            }
+            return;
+        }
+        const asset = result.assets?.[0];
+        if (asset?.uri) {
+            const mimeType = asset.type ?? 'image/jpeg';
+            uploadPhoto({
+                uri: asset.uri,
+                type: mimeType,
+                name: asset.fileName ?? `profile-photo.${mimeType.split('/')[1] ?? 'jpg'}`,
+            });
+        }
+    };
+
+    const handleChangePhoto = () => {
+        Alert.alert(appString.profileScreen.changePhotoTitle, undefined, [
+            { text: appString.profileScreen.takePhotoOption, onPress: handleTakePhoto },
+            { text: appString.profileScreen.chooseFromGalleryOption, onPress: handleChooseFromGallery },
+            { text: appString.profileScreen.cancelButton, style: 'cancel' },
+        ]);
+    };
 
     const handleLogout = () => {
         Alert.alert(
@@ -69,9 +194,27 @@ export default function ProfileScreen() {
 
                 <View style={styles.content}>
                     <View style={styles.profileCard}>
-                        <View style={styles.avatarCircle}>
-                            <Icon name="user" size={28} color={themeColors.primary} />
-                        </View>
+                        <TouchableOpacity
+                            style={styles.avatarWrapper}
+                            activeOpacity={0.8}
+                            onPress={handleChangePhoto}>
+                            <View style={styles.avatarCircle}>
+                                {photoUri ? (
+                                    <Image source={{ uri: photoUri }} style={styles.avatarImage} />
+                                ) : (
+                                    <Icon name="user" size={28} color={themeColors.primary} />
+                                )}
+                            </View>
+                            {isUploadingPhoto || isFetchingPhoto ? (
+                                <View style={styles.avatarLoadingOverlay}>
+                                    <ActivityIndicator color={themeColors.white} size="small" />
+                                </View>
+                            ) : (
+                                <View style={styles.cameraBadge}>
+                                    <Icon name="camera" size={11} color={themeColors.white} />
+                                </View>
+                            )}
+                        </TouchableOpacity>
                         <View style={styles.profileInfo}>
                             <Text style={styles.name}>
                                 {user?.fullName ?? appString.profileScreen.emptyValue}

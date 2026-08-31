@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
+    "build-apk": "cd android && ./gradlew assembleRelease",
     "enable-android": "adb -s ST5GDM24HB006104 reverse tcp:8081 tcp:8081"
   },
   "dependencies": {

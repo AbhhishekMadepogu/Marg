@@ -21,7 +21,9 @@ export const appString = {
   },
   tasksScreen: {
     tabLabel: 'Tasks',
-    greeting: 'Hello, Worker!',
+    greetingPrefix: 'Hello, ',
+    greetingSuffix: '!',
+    greetingFallbackName: 'Worker',
     statAssigned: 'Assigned',
     statInProgress: 'In Progress',
     statCompleted: 'Completed',
@@ -100,5 +102,16 @@ export const appString = {
     logoutConfirmTitle: 'Logout',
     logoutConfirmMessage: 'Are you sure you want to logout?',
     logoutCancel: 'Cancel',
+    changePhotoTitle: 'Change Profile Photo',
+    takePhotoOption: 'Take Photo',
+    chooseFromGalleryOption: 'Choose from Gallery',
+    cancelButton: 'Cancel',
+    cameraPermissionTitle: 'Camera Permission',
+    cameraPermissionMessage: 'MARG needs camera access to update your profile photo.',
+    cameraPermissionAllow: 'Allow',
+    cameraPermissionBlockedMessage:
+      'Camera access is disabled for MARG. Please enable it from your device settings to take a photo.',
+    openSettingsLabel: 'Open Settings',
+    photoUploadFailedTitle: 'Upload Failed',
   },
 };
