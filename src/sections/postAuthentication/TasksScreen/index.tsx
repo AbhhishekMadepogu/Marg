@@ -1,18 +1,20 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Animated,
     Linking,
     RefreshControl,
-    ScrollView,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { moderateScale } from 'react-native-size-matters';
 import Icon from 'react-native-vector-icons/Feather';
 import FA5Icon from 'react-native-vector-icons/FontAwesome5';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
-import Hero from '../../../components/Hero';
+import Hero, { HERO_MAX_HEIGHT, HERO_MIN_CONTENT_HEIGHT } from '../../../components/Hero';
 import { useAuth } from '../../../hooks/useAuth';
 import { useIssue, type IssueTask, type PhotoFile } from '../../../hooks/useIssue';
 import { appString } from '../../../utility/constants/appString';
@@ -27,6 +29,9 @@ import styles from './styles';
 
 const getMediaUrl = (issueId: string, type: 'before' | 'after') =>
     `${API_BASE_URL}/media/${issueId}/${type}`;
+
+// Fallback estimate used only until the real, measured height lands after first layout.
+const DEFAULT_STICKY_HEADER_HEIGHT = moderateScale(230);
 
 type TaskStatus = 'pending' | 'accepted' | 'rejected' | 'resolved';
 type TaskFilter = 'assigned' | 'inProgress' | 'completed' | 'overdue';
@@ -174,6 +179,23 @@ export default function TasksScreen() {
     const [completeTaskId, setCompleteTaskId] = useState<string | null>(null);
     const [previewTaskId, setPreviewTaskId] = useState<string | null>(null);
     const [activeFilter, setActiveFilter] = useState<TaskFilter>('assigned');
+    const scrollY = useRef(new Animated.Value(0)).current;
+    const insets = useSafeAreaInsets();
+    const [stickyHeaderHeight, setStickyHeaderHeight] = useState<number | null>(null);
+
+    const heroMinHeight = insets.top + HERO_MIN_CONTENT_HEIGHT;
+    const heroCollapseDistance = HERO_MAX_HEIGHT - heroMinHeight;
+
+    // The pinned header (greeting, stats, section row) always stays fully visible;
+    // only its top position tracks the hero's collapse, at exactly the scroll rate,
+    // so its bottom edge always lines up with the list's top edge underneath it -
+    // no gap, no overlap.
+    const heroHeight = scrollY.interpolate({
+        inputRange: [0, heroCollapseDistance],
+        outputRange: [HERO_MAX_HEIGHT, heroMinHeight],
+        extrapolate: 'clamp',
+    });
+    const reservedTopSpace = HERO_MAX_HEIGHT + (stickyHeaderHeight ?? DEFAULT_STICKY_HEADER_HEIGHT);
 
     const loadTasks = useCallback(
         async (isRefresh = false) => {
@@ -344,9 +366,14 @@ export default function TasksScreen() {
 
     return (
         <View style={styles.container}>
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
+            <Animated.ScrollView
+                contentContainerStyle={[styles.scrollContent, { paddingTop: reservedTopSpace }]}
                 showsVerticalScrollIndicator={false}
+                scrollEventThrottle={16}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: false },
+                )}
                 refreshControl={
                     <RefreshControl
                         refreshing={isRefreshing}
@@ -355,65 +382,7 @@ export default function TasksScreen() {
                         tintColor={themeColors.primary}
                     />
                 }>
-                <Hero>
-                    <TouchableOpacity style={styles.bellButton} activeOpacity={0.8}>
-                        <Icon name="bell" size={18} color={themeColors.navy} />
-                    </TouchableOpacity>
-                </Hero>
-
-                <View style={styles.content}>
-                    <Text style={styles.greeting}>
-                        {appString.tasksScreen.greetingPrefix}
-                        {greetingName}
-                        {appString.tasksScreen.greetingSuffix}
-                    </Text>
-                    <Text style={styles.subtitle}>{activeFilterCopy.subtitle}</Text>
-
-                    <View style={styles.statsRow}>
-                        {stats.map(stat => {
-                            const isActive = stat.key === activeFilter;
-                            return (
-                                <TouchableOpacity
-                                    key={stat.key}
-                                    style={[
-                                        styles.statCard,
-                                        isActive && {
-                                            borderColor: stat.color,
-                                            backgroundColor: `${stat.color}0D`,
-                                        },
-                                    ]}
-                                    activeOpacity={0.8}
-                                    onPress={() => setActiveFilter(stat.key)}>
-                                    <View style={[styles.statIconCircle, { shadowColor: stat.color }]}>
-                                        {stat.iconSet === 'fa5' ? (
-                                            <FA5Icon name={stat.icon} size={15} color={stat.color} solid />
-                                        ) : (
-                                            <MCIcon name={stat.icon} size={17} color={stat.color} />
-                                        )}
-                                    </View>
-                                    <Text style={[styles.statNumber, { color: stat.color }]}>{stat.value}</Text>
-                                    <Text style={styles.statLabel}>{stat.label}</Text>
-                                    {isActive ? (
-                                        <View style={[styles.statCardActiveBar, { backgroundColor: stat.color }]} />
-                                    ) : null}
-                                </TouchableOpacity>
-                            );
-                        })}
-                    </View>
-
-                    <View style={styles.sectionHeaderRow}>
-                        <Text style={styles.sectionTitle}>
-                            {activeFilterCopy.sectionTitle} ({activeFilterCopy.tasks.length})
-                        </Text>
-                        <View style={styles.sortRow}>
-                            <Text style={styles.sortLabel}>{appString.tasksScreen.sortByLabel}</Text>
-                            <View style={styles.sortValueRow}>
-                                <Text style={styles.sortValueText}>{activeFilterCopy.sortOption}</Text>
-                                <Icon name="chevron-down" size={12} color={themeColors.subtitle} />
-                            </View>
-                        </View>
-                    </View>
-
+                <View style={styles.listContent}>
                     {isFetchingTasks && tasks.length === 0 ? (
                         <View style={styles.emptyState}>
                             <ActivityIndicator color={themeColors.primary} />
@@ -606,7 +575,77 @@ export default function TasksScreen() {
                     </View>
                     )}
                 </View>
-            </ScrollView>
+            </Animated.ScrollView>
+
+            <View style={styles.heroOverlay} pointerEvents="box-none">
+                <Hero scrollY={scrollY}>
+                    <TouchableOpacity style={styles.bellButton} activeOpacity={0.8}>
+                        <Icon name="bell" size={18} color={themeColors.navy} />
+                    </TouchableOpacity>
+                </Hero>
+            </View>
+
+            <Animated.View
+                style={[styles.pinnedHeader, { top: heroHeight }]}
+                onLayout={event => {
+                    if (stickyHeaderHeight === null) {
+                        setStickyHeaderHeight(event.nativeEvent.layout.height);
+                    }
+                }}>
+                <Text style={styles.greeting}>
+                    {appString.tasksScreen.greetingPrefix}
+                    {greetingName}
+                    {appString.tasksScreen.greetingSuffix}
+                </Text>
+                <Text style={styles.subtitle}>{activeFilterCopy.subtitle}</Text>
+
+                <View style={styles.statsRow}>
+                    {stats.map(stat => {
+                        const isActive = stat.key === activeFilter;
+                        return (
+                            <TouchableOpacity
+                                key={stat.key}
+                                style={[
+                                    styles.statCard,
+                                    isActive && {
+                                        borderColor: stat.color,
+                                        backgroundColor: `${stat.color}0D`,
+                                    },
+                                ]}
+                                activeOpacity={0.8}
+                                onPress={() => setActiveFilter(stat.key)}>
+                                <View style={styles.statTopRow}>
+                                    <View style={[styles.statIconCircle, { shadowColor: stat.color }]}>
+                                        {stat.iconSet === 'fa5' ? (
+                                            <FA5Icon name={stat.icon} size={15} color={stat.color} solid />
+                                        ) : (
+                                            <MCIcon name={stat.icon} size={17} color={stat.color} />
+                                        )}
+                                    </View>
+                                    <Text style={[styles.statNumber, { color: stat.color }]}>{stat.value}</Text>
+                                </View>
+                                <Text style={styles.statLabel}>{stat.label}</Text>
+                                {isActive ? (
+                                    <View style={[styles.statCardActiveBar, { backgroundColor: stat.color }]} />
+                                ) : null}
+                            </TouchableOpacity>
+                        );
+                    })}
+                </View>
+
+                <View style={styles.sectionHeaderRow}>
+                    <Text style={styles.sectionTitle}>
+                        {activeFilterCopy.sectionTitle} ({activeFilterCopy.tasks.length})
+                    </Text>
+                    <View style={styles.sortRow}>
+                        <Text style={styles.sortLabel}>{appString.tasksScreen.sortByLabel}</Text>
+                        <View style={styles.sortValueRow}>
+                            <Text style={styles.sortValueText}>{activeFilterCopy.sortOption}</Text>
+                            <Icon name="chevron-down" size={12} color={themeColors.subtitle} />
+                        </View>
+                    </View>
+                </View>
+            </Animated.View>
 
             <AcceptTaskModal
                 visible={acceptTaskId !== null}

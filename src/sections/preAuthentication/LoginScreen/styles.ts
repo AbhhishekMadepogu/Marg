@@ -24,10 +24,16 @@ export default StyleSheet.create({
     background: {
         height: HERO_HEIGHT,
     },
+    backgroundCompact: {
+        height: moderateScale(90),
+    },
     headerContent: {
         flex: 1,
         alignItems: 'center',
         paddingTop: moderateScale(54),
+    },
+    headerContentCompact: {
+        paddingTop: moderateScale(16),
     },
     logoRow: {
         flexDirection: 'row',

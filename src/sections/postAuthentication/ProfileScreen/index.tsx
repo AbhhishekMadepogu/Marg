@@ -6,7 +6,6 @@ import {
     Linking,
     PermissionsAndroid,
     Platform,
-    ScrollView,
     Text,
     TouchableOpacity,
     View,
@@ -183,92 +182,88 @@ export default function ProfileScreen() {
 
     return (
         <View style={styles.container}>
-            <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}>
-                <Hero >
-                    <TouchableOpacity style={styles.bellButton} activeOpacity={0.8}>
-                        <Icon name="bell" size={18} color={themeColors.navy} />
-                    </TouchableOpacity>
-                </Hero>
+            <Hero>
+                <TouchableOpacity style={styles.bellButton} activeOpacity={0.8}>
+                    <Icon name="bell" size={18} color={themeColors.navy} />
+                </TouchableOpacity>
+            </Hero>
 
-                <View style={styles.content}>
-                    <View style={styles.profileCard}>
-                        <TouchableOpacity
-                            style={styles.avatarWrapper}
-                            activeOpacity={0.8}
-                            onPress={handleChangePhoto}>
-                            <View style={styles.avatarCircle}>
-                                {photoUri ? (
-                                    <Image source={{ uri: photoUri }} style={styles.avatarImage} />
-                                ) : (
-                                    <Icon name="user" size={28} color={themeColors.primary} />
-                                )}
-                            </View>
-                            {isUploadingPhoto || isFetchingPhoto ? (
-                                <View style={styles.avatarLoadingOverlay}>
-                                    <ActivityIndicator color={themeColors.white} size="small" />
-                                </View>
-                            ) : (
-                                <View style={styles.cameraBadge}>
-                                    <Icon name="camera" size={11} color={themeColors.white} />
-                                </View>
-                            )}
-                        </TouchableOpacity>
-                        <View style={styles.profileInfo}>
-                            <Text style={styles.name}>
-                                {user?.fullName ?? appString.profileScreen.emptyValue}
-                            </Text>
-                            <View style={styles.contactRow}>
-                                <Icon
-                                    name="phone"
-                                    size={12}
-                                    color={themeColors.subtitle}
-                                    style={styles.contactIcon}
-                                />
-                                <Text style={styles.contactText}>
-                                    {user
-                                        ? `${appString.profileScreen.countryCode} ${user.phone}`
-                                        : appString.profileScreen.emptyValue}
-                                </Text>
-                            </View>
-                        </View>
-                    </View>
-
-                    <Text style={styles.sectionTitle}>
-                        {appString.profileScreen.detailsSectionTitle}
-                    </Text>
-                    <View style={styles.detailsCard}>
-                        {details.map((detail, index) => (
-                            <View
-                                key={detail.label}
-                                style={[
-                                    styles.detailRow,
-                                    index === details.length - 1 && styles.detailRowLast,
-                                ]}>
-                                <View style={styles.detailIconCircle}>
-                                    <MCIcon name={detail.icon} size={16} color={themeColors.primary} />
-                                </View>
-                                <Text style={styles.detailLabel}>{detail.label}</Text>
-                                <Text style={styles.detailValue}>{detail.value}</Text>
-                            </View>
-                        ))}
-                    </View>
-
+            <View style={styles.content}>
+                <View style={styles.profileCard}>
                     <TouchableOpacity
-                        style={styles.logoutButton}
+                        style={styles.avatarWrapper}
                         activeOpacity={0.8}
-                        onPress={handleLogout}>
-                        <View style={styles.logoutLeft}>
-                            <Icon name="log-out" size={16} color={themeColors.danger} />
-                            <Text style={styles.logoutButtonText}>
-                                {appString.profileScreen.logoutButton}
+                        onPress={handleChangePhoto}>
+                        <View style={styles.avatarCircle}>
+                            {photoUri ? (
+                                <Image source={{ uri: photoUri }} style={styles.avatarImage} />
+                            ) : (
+                                <Icon name="user" size={28} color={themeColors.primary} />
+                            )}
+                        </View>
+                        {isUploadingPhoto || isFetchingPhoto ? (
+                            <View style={styles.avatarLoadingOverlay}>
+                                <ActivityIndicator color={themeColors.white} size="small" />
+                            </View>
+                        ) : (
+                            <View style={styles.cameraBadge}>
+                                <Icon name="camera" size={11} color={themeColors.white} />
+                            </View>
+                        )}
+                    </TouchableOpacity>
+                    <View style={styles.profileInfo}>
+                        <Text style={styles.name}>
+                            {user?.fullName ?? appString.profileScreen.emptyValue}
+                        </Text>
+                        <View style={styles.contactRow}>
+                            <Icon
+                                name="phone"
+                                size={12}
+                                color={themeColors.subtitle}
+                                style={styles.contactIcon}
+                            />
+                            <Text style={styles.contactText}>
+                                {user
+                                    ? `${appString.profileScreen.countryCode} ${user.phone}`
+                                    : appString.profileScreen.emptyValue}
                             </Text>
                         </View>
-                        <Icon name="chevron-right" size={16} color={themeColors.danger} />
-                    </TouchableOpacity>
+                    </View>
                 </View>
-            </ScrollView>
+
+                <Text style={styles.sectionTitle}>
+                    {appString.profileScreen.detailsSectionTitle}
+                </Text>
+                <View style={styles.detailsCard}>
+                    {details.map((detail, index) => (
+                        <View
+                            key={detail.label}
+                            style={[
+                                styles.detailRow,
+                                index === details.length - 1 && styles.detailRowLast,
+                            ]}>
+                            <View style={styles.detailIconCircle}>
+                                <MCIcon name={detail.icon} size={16} color={themeColors.primary} />
+                            </View>
+                            <Text style={styles.detailLabel}>{detail.label}</Text>
+                            <Text style={styles.detailValue}>{detail.value}</Text>
+                        </View>
+                    ))}
+                </View>
+
+                <TouchableOpacity
+                    style={styles.logoutButton}
+                    activeOpacity={0.8}
+                    onPress={handleLogout}>
+                    <View style={styles.logoutLeft}>
+                        <Icon name="log-out" size={16} color={themeColors.danger} />
+                        <Text style={styles.logoutButtonText}>
+                            {appString.profileScreen.logoutButton}
+                        </Text>
+                    </View>
+                    <Icon name="chevron-right" size={16} color={themeColors.danger} />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 }

@@ -10,6 +10,14 @@ export default StyleSheet.create({
         height: moderateScale(210),
         width: '100%',
     },
+    heroContainer: {
+        width: '100%',
+        overflow: 'hidden',
+    },
+    heroImageFill: {
+        flex: 1,
+        width: '100%',
+    },
     heroContent: {
         paddingHorizontal: moderateScale(20),
         paddingTop: moderateScale(8),

@@ -7,10 +7,6 @@ export default StyleSheet.create({
         flex: 1,
         backgroundColor: colors.white,
     },
-    scrollContent: {
-        flexGrow: 1,
-        paddingBottom: moderateScale(24),
-    },
     bellButton: {
         width: moderateScale(36),
         height: moderateScale(36),
@@ -25,8 +21,11 @@ export default StyleSheet.create({
         elevation: moderateScale(4),
     },
     content: {
+        flex: 1,
+        justifyContent: 'center',
         paddingHorizontal: moderateScale(16),
-        paddingTop: moderateScale(20),
+        paddingTop: moderateScale(14),
+        paddingBottom: moderateScale(12),
     },
     profileCard: {
         flexDirection: 'row',
@@ -35,15 +34,15 @@ export default StyleSheet.create({
         borderWidth: moderateScale(1),
         borderColor: colors.border,
         borderRadius: moderateScale(14),
-        padding: moderateScale(14),
+        padding: moderateScale(12),
     },
     avatarWrapper: {
         marginRight: moderateScale(12),
     },
     avatarCircle: {
-        width: moderateScale(56),
-        height: moderateScale(56),
-        borderRadius: moderateScale(28),
+        width: moderateScale(50),
+        height: moderateScale(50),
+        borderRadius: moderateScale(25),
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.infoBg,
@@ -55,7 +54,7 @@ export default StyleSheet.create({
     },
     avatarLoadingOverlay: {
         ...StyleSheet.absoluteFill,
-        borderRadius: moderateScale(28),
+        borderRadius: moderateScale(25),
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: 'rgba(0, 0, 0, 0.4)',
@@ -97,8 +96,8 @@ export default StyleSheet.create({
         fontSize: moderateScale(15),
         fontWeight: '800',
         color: colors.navy,
-        marginTop: moderateScale(24),
-        marginBottom: moderateScale(12),
+        marginTop: moderateScale(16),
+        marginBottom: moderateScale(8),
     },
     detailsCard: {
         backgroundColor: colors.white,
@@ -110,7 +109,7 @@ export default StyleSheet.create({
     detailRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: moderateScale(14),
+        paddingVertical: moderateScale(10),
         borderBottomWidth: moderateScale(1),
         borderBottomColor: colors.border,
     },
@@ -118,9 +117,9 @@ export default StyleSheet.create({
         borderBottomWidth: 0,
     },
     detailIconCircle: {
-        width: moderateScale(28),
-        height: moderateScale(28),
-        borderRadius: moderateScale(14),
+        width: moderateScale(24),
+        height: moderateScale(24),
+        borderRadius: moderateScale(12),
         alignItems: 'center',
         justifyContent: 'center',
         backgroundColor: colors.infoBg,
@@ -145,8 +144,8 @@ export default StyleSheet.create({
         borderColor: colors.danger,
         borderRadius: moderateScale(12),
         paddingHorizontal: moderateScale(16),
-        paddingVertical: moderateScale(14),
-        marginTop: moderateScale(24),
+        paddingVertical: moderateScale(12),
+        marginTop: moderateScale(16),
     },
     logoutLeft: {
         flexDirection: 'row',

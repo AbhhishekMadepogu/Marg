@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     Image,
     ImageBackground,
+    Keyboard,
     KeyboardAvoidingView,
     NativeSyntheticEvent,
     Platform,
@@ -40,7 +41,9 @@ export default function LoginScreen() {
     const [secondsLeft, setSecondsLeft] = useState(RESEND_OTP_SECONDS);
     const [resendKey, setResendKey] = useState(0);
     const [apiError, setApiError] = useState<string | null>(null);
+    const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
     const otpInputRefs = useRef<Array<TextInput | null>>([]);
+    const scrollViewRef = useRef<ScrollView | null>(null);
     const { requestOtp, login, isRequestingOtp, isLoggingIn } = useAuth();
 
     const isMobileNumberValid = mobileNumber.length === MOBILE_NUMBER_LENGTH;
@@ -67,8 +70,20 @@ export default function LoginScreen() {
     useEffect(() => {
         if (otpSent) {
             otpInputRefs.current[0]?.focus();
+            scrollViewRef.current?.scrollToEnd({ animated: true });
         }
     }, [otpSent]);
+
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+        const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
 
     const handleSendOtp = async () => {
         if (!isMobileNumberValid) {
@@ -135,16 +150,22 @@ export default function LoginScreen() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
             <ScrollView
+                ref={scrollViewRef}
                 contentContainerStyle={styles.scrollContent}
                 keyboardShouldPersistTaps="handled"
                 bounces={false}>
                 <ImageBackground
                     source={backgroundImage}
-                    style={styles.background}
+                    style={[styles.background, isKeyboardVisible && styles.backgroundCompact]}
                     resizeMode="cover">
-                    <View style={styles.headerContent}>
+                    <View
+                        style={[
+                            styles.headerContent,
+                            isKeyboardVisible && styles.headerContentCompact,
+                        ]}>
                         <Image
                             source={margLogo}
                             style={styles.logoImage}
@@ -176,7 +197,10 @@ export default function LoginScreen() {
                                         value={digit}
                                         onChangeText={text => handleOtpChange(text, index)}
                                         onKeyPress={event => handleOtpKeyPress(event, index)}
-                                        onFocus={() => setFocusedOtpIndex(index)}
+                                        onFocus={() => {
+                                            setFocusedOtpIndex(index);
+                                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                                        }}
                                         onBlur={() => setFocusedOtpIndex(null)}
                                         keyboardType="number-pad"
                                         maxLength={1}
@@ -231,6 +255,7 @@ export default function LoginScreen() {
                                     maxLength={MOBILE_NUMBER_LENGTH}
                                     value={mobileNumber}
                                     onChangeText={text => setMobileNumber(text.replace(/[^0-9]/g, ''))}
+                                    onFocus={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
                                     returnKeyType="done"
                                     enablesReturnKeyAutomatically
                                     onSubmitEditing={handleSendOtp}
