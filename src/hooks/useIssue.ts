@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../utility/constants/queryKeys';
+import { extractErrorMessage } from '../utility/apiError';
 import { useAuth } from './useAuth';
 
 export type PhotoFile = {
@@ -31,130 +33,101 @@ export type IssueTask = {
     report_count: number;
     created_at: string;
     updated_at: string;
+    assigned_at: string | null;
     rejection_reason: RejectionReason[];
     eta_date: string | null;
     accepted_at: string | null;
     resolved_at: string | null;
 };
 
-const extractErrorMessage = async (response: Response, fallback: string) => {
-    try {
-        const body = await response.json();
-        if (typeof body?.detail === 'string') {
-            return body.detail;
-        }
-        if (Array.isArray(body?.detail) && body.detail[0]?.msg) {
-            return body.detail[0].msg;
-        }
-    } catch {
-        // Response had no JSON body.
-    }
-    return fallback;
-};
-
-export function useIssue() {
-    const { authorizedFetch } = useAuth();
-    const [isFetchingTasks, setIsFetchingTasks] = useState(false);
-    const [isAcceptingTask, setIsAcceptingTask] = useState(false);
-    const [isStartingTask, setIsStartingTask] = useState(false);
-    const [isResolvingTask, setIsResolvingTask] = useState(false);
-    const [isRejectingTask, setIsRejectingTask] = useState(false);
-
-    const getTasks = useCallback(async (): Promise<IssueTask[]> => {
-        setIsFetchingTasks(true);
-        try {
+export function useTasksQuery() {
+    const { authorizedFetch, accessToken } = useAuth();
+    return useQuery({
+        queryKey: queryKeys.tasks,
+        queryFn: async (): Promise<IssueTask[]> => {
             const response = await authorizedFetch('/worker/tasks');
             if (!response.ok) {
                 throw new Error(await extractErrorMessage(response, 'Failed to load tasks.'));
             }
-            return await response.json();
-        } finally {
-            setIsFetchingTasks(false);
-        }
-    }, [authorizedFetch]);
+            return response.json();
+        },
+        enabled: Boolean(accessToken),
+    });
+}
 
-    const acceptTask = useCallback(async (issueId: string, etaDate: string): Promise<IssueTask> => {
-        setIsAcceptingTask(true);
-        try {
-            const response = await authorizedFetch(`/worker/tasks/${issueId}/accept`, {
+// Shared by every task action: swap the updated task into the cached list right
+// away, then refetch in the background so the list matches the server.
+function useTaskMutation<TVariables>(
+    request: (variables: TVariables) => Promise<Response>,
+    fallbackError: string,
+) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (variables: TVariables): Promise<IssueTask> => {
+            const response = await request(variables);
+            if (!response.ok) {
+                throw new Error(await extractErrorMessage(response, fallbackError));
+            }
+            return response.json();
+        },
+        onSuccess: updated => {
+            queryClient.setQueryData<IssueTask[]>(queryKeys.tasks, prev =>
+                prev?.map(task => (task.id === updated.id ? updated : task)),
+            );
+            queryClient.invalidateQueries({ queryKey: queryKeys.tasks });
+        },
+    });
+}
+
+export function useAcceptTaskMutation() {
+    const { authorizedFetch } = useAuth();
+    return useTaskMutation(
+        ({ issueId, etaDate }: { issueId: string; etaDate: string }) =>
+            authorizedFetch(`/worker/tasks/${issueId}/accept`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ eta_date: etaDate }),
-            });
-            if (!response.ok) {
-                throw new Error(await extractErrorMessage(response, 'Failed to accept task.'));
-            }
-            return await response.json();
-        } finally {
-            setIsAcceptingTask(false);
-        }
-    }, [authorizedFetch]);
+            }),
+        'Failed to accept task.',
+    );
+}
 
-    const startTask = useCallback(async (issueId: string): Promise<IssueTask> => {
-        setIsStartingTask(true);
-        try {
-            const response = await authorizedFetch(`/worker/tasks/${issueId}/start`, {
-                method: 'POST',
-            });
-            if (!response.ok) {
-                throw new Error(await extractErrorMessage(response, 'Failed to start task.'));
-            }
-            return await response.json();
-        } finally {
-            setIsStartingTask(false);
-        }
-    }, [authorizedFetch]);
+export function useStartTaskMutation() {
+    const { authorizedFetch } = useAuth();
+    return useTaskMutation(
+        (issueId: string) => authorizedFetch(`/worker/tasks/${issueId}/start`, { method: 'POST' }),
+        'Failed to start task.',
+    );
+}
 
-    const resolveTask = useCallback(async (issueId: string, photo: PhotoFile): Promise<IssueTask> => {
-        setIsResolvingTask(true);
-        try {
+export function useResolveTaskMutation() {
+    const { authorizedFetch } = useAuth();
+    return useTaskMutation(
+        ({ issueId, photo }: { issueId: string; photo: PhotoFile }) => {
             const formData = new FormData();
             formData.append('photo', {
                 uri: photo.uri,
                 type: photo.type,
                 name: photo.name,
             } as unknown as Blob);
-
-            const response = await authorizedFetch(`/worker/tasks/${issueId}/resolve`, {
+            return authorizedFetch(`/worker/tasks/${issueId}/resolve`, {
                 method: 'POST',
                 body: formData,
             });
-            if (!response.ok) {
-                throw new Error(await extractErrorMessage(response, 'Failed to complete task.'));
-            }
-            return await response.json();
-        } finally {
-            setIsResolvingTask(false);
-        }
-    }, [authorizedFetch]);
+        },
+        'Failed to complete task.',
+    );
+}
 
-    const rejectTask = useCallback(async (issueId: string, reason: string): Promise<IssueTask> => {
-        setIsRejectingTask(true);
-        try {
-            const response = await authorizedFetch(`/worker/tasks/${issueId}/reject`, {
+export function useRejectTaskMutation() {
+    const { authorizedFetch } = useAuth();
+    return useTaskMutation(
+        ({ issueId, reason }: { issueId: string; reason: string }) =>
+            authorizedFetch(`/worker/tasks/${issueId}/reject`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason }),
-            });
-            if (!response.ok) {
-                throw new Error(await extractErrorMessage(response, 'Failed to reject task.'));
-            }
-            return await response.json();
-        } finally {
-            setIsRejectingTask(false);
-        }
-    }, [authorizedFetch]);
-
-    return {
-        isFetchingTasks,
-        isAcceptingTask,
-        isStartingTask,
-        isResolvingTask,
-        isRejectingTask,
-        getTasks,
-        acceptTask,
-        startTask,
-        resolveTask,
-        rejectTask,
-    };
+            }),
+        'Failed to reject task.',
+    );
 }

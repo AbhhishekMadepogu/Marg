@@ -127,30 +127,6 @@ export default StyleSheet.create({
         fontWeight: '800',
         color: colors.navy,
     },
-    sortRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    sortLabel: {
-        fontSize: moderateScale(11.5),
-        color: colors.subtitle,
-        marginRight: moderateScale(6),
-    },
-    sortValueRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        borderWidth: moderateScale(1),
-        borderColor: colors.border,
-        borderRadius: moderateScale(8),
-        paddingHorizontal: moderateScale(8),
-        paddingVertical: moderateScale(5),
-    },
-    sortValueText: {
-        fontSize: moderateScale(11.5),
-        fontWeight: '700',
-        color: colors.navy,
-        marginRight: moderateScale(4),
-    },
     taskList: {
         marginTop: moderateScale(14),
     },
@@ -368,5 +344,14 @@ export default StyleSheet.create({
     statusBadgeText: {
         fontSize: moderateScale(11),
         fontWeight: '700',
+    },
+    skeletonThumb: {
+        marginRight: moderateScale(12),
+    },
+    skeletonLine: {
+        marginTop: moderateScale(8),
+    },
+    skeletonButton: {
+        marginRight: moderateScale(6),
     },
 });

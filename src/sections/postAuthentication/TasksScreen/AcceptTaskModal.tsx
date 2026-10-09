@@ -1,5 +1,5 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     KeyboardAvoidingView,
     Modal,
@@ -32,6 +32,16 @@ export default function AcceptTaskModal({
 }: AcceptTaskModalProps) {
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [showPicker, setShowPicker] = useState(false);
+
+    // Covers every dismissal path, not just Cancel/X - including a
+    // successful submit, which the parent closes by flipping `visible`
+    // without going through handleClose.
+    useEffect(() => {
+        if (!visible) {
+            setSelectedDate(null);
+            setShowPicker(false);
+        }
+    }, [visible]);
 
     const handleClose = () => {
         setSelectedDate(null);

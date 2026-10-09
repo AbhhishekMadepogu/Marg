@@ -1,6 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
     Alert,
     Animated,
     Linking,
@@ -16,19 +15,30 @@ import FA5Icon from 'react-native-vector-icons/FontAwesome5';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Hero, { HERO_MAX_HEIGHT, HERO_MIN_CONTENT_HEIGHT } from '../../../components/Hero';
 import { useAuth } from '../../../hooks/useAuth';
-import { useIssue, type IssueTask, type PhotoFile } from '../../../hooks/useIssue';
+import {
+    useAcceptTaskMutation,
+    useRejectTaskMutation,
+    useResolveTaskMutation,
+    useTasksQuery,
+    type IssueTask,
+    type PhotoFile,
+} from '../../../hooks/useIssue';
 import { appString } from '../../../utility/constants/appString';
 import { API_BASE_URL } from '../../../utility/constants/apiConfig';
 import { themeColors } from '../../../utility/constants/themeColors';
+import { formatDateIST, formatDateTimeIST, toISTDateOnly } from '../../../utility/dateTime';
 import AcceptTaskModal from './AcceptTaskModal';
 import CompleteTaskModal from './CompleteTaskModal';
 import PhotoPreviewModal from './PhotoPreviewModal';
 import RejectTaskModal from './RejectTaskModal';
+import TaskCardSkeleton from './TaskCardSkeleton';
 import TaskThumbnail from './TaskThumbnail';
 import styles from './styles';
 
 const getMediaUrl = (issueId: string, type: 'before' | 'after') =>
     `${API_BASE_URL}/media/${issueId}/${type}`;
+
+const SKELETON_CARD_COUNT = 4;
 
 // Fallback estimate used only until the real, measured height lands after first layout.
 const DEFAULT_STICKY_HEADER_HEIGHT = moderateScale(230);
@@ -96,30 +106,11 @@ const toCalendarDateString = (date: Date) => {
     return `${year}-${month}-${day}`;
 };
 
-const formatAssignedDate = (isoDate: string) => {
-    const date = new Date(isoDate);
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
-    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-};
-
-const formatDateTime = (isoDate: string) => {
-    const date = new Date(isoDate);
-    if (Number.isNaN(date.getTime())) {
-        return '';
-    }
-    const datePart = date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-    const timePart = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    return `${datePart}, ${timePart}`;
-};
 
 const MAX_GREETING_NAME_LENGTH = 20;
 
 const truncateName = (name: string) =>
     name.length > MAX_GREETING_NAME_LENGTH ? `${name.slice(0, MAX_GREETING_NAME_LENGTH)}...` : name;
-
-const startOfDay = (date: Date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
 const isTaskOverdue = (task: Task) => {
     if (task.status !== 'accepted' || !task.etaDateRaw) {
@@ -129,13 +120,13 @@ const isTaskOverdue = (task: Task) => {
     if (Number.isNaN(eta.getTime())) {
         return false;
     }
-    return startOfDay(eta).getTime() < startOfDay(new Date()).getTime();
+    return toISTDateOnly(eta) < toISTDateOnly(new Date());
 };
 
 const daysOverdue = (etaDateRaw: string) => {
-    const eta = startOfDay(new Date(etaDateRaw));
-    const today = startOfDay(new Date());
-    return Math.max(1, Math.round((today.getTime() - eta.getTime()) / (24 * 60 * 60 * 1000)));
+    const etaMidnightUTC = new Date(`${toISTDateOnly(etaDateRaw)}T00:00:00Z`).getTime();
+    const todayMidnightUTC = new Date(`${toISTDateOnly(new Date())}T00:00:00Z`).getTime();
+    return Math.max(1, Math.round((todayMidnightUTC - etaMidnightUTC) / (24 * 60 * 60 * 1000)));
 };
 
 const mapIssueToTask = (issue: IssueTask): Task => {
@@ -145,10 +136,10 @@ const mapIssueToTask = (issue: IssueTask): Task => {
         id: issue.id,
         title: issue.category_name || 'Issue',
         ward: issue.address ?? `${issue.lat}, ${issue.lng}`,
-        assignedDate: formatAssignedDate(issue.created_at),
-        etaDate: issue.eta_date ? formatAssignedDate(issue.eta_date) : null,
+        assignedDate: formatDateIST(issue.assigned_at ?? issue.created_at),
+        etaDate: issue.eta_date ? formatDateIST(issue.eta_date) : null,
         etaDateRaw: issue.eta_date,
-        completedAt: issue.resolved_at ? formatDateTime(issue.resolved_at) : null,
+        completedAt: issue.resolved_at ? formatDateTimeIST(issue.resolved_at) : null,
         beforePhotoUri: getMediaUrl(issue.id, 'before'),
         photoUri: status === 'resolved' ? getMediaUrl(issue.id, 'after') : null,
         lat: issue.lat,
@@ -161,18 +152,13 @@ const mapIssueToTask = (issue: IssueTask): Task => {
 
 export default function TasksScreen() {
     const { user } = useAuth();
-    const {
-        getTasks,
-        acceptTask,
-        resolveTask,
-        rejectTask,
-        isFetchingTasks,
-        isAcceptingTask,
-        isResolvingTask,
-        isRejectingTask,
-    } = useIssue();
-    const [tasks, setTasks] = useState<Task[]>([]);
-    const [error, setError] = useState<string | null>(null);
+    const tasksQuery = useTasksQuery();
+    const acceptTaskMutation = useAcceptTaskMutation();
+    const rejectTaskMutation = useRejectTaskMutation();
+    const resolveTaskMutation = useResolveTaskMutation();
+    const tasks = useMemo(() => (tasksQuery.data ?? []).map(mapIssueToTask), [tasksQuery.data]);
+    const [actionError, setActionError] = useState<string | null>(null);
+    const error = actionError ?? tasksQuery.error?.message ?? null;
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [acceptTaskId, setAcceptTaskId] = useState<string | null>(null);
     const [rejectTaskId, setRejectTaskId] = useState<string | null>(null);
@@ -197,31 +183,13 @@ export default function TasksScreen() {
     });
     const reservedTopSpace = HERO_MAX_HEIGHT + (stickyHeaderHeight ?? DEFAULT_STICKY_HEADER_HEIGHT);
 
-    const loadTasks = useCallback(
-        async (isRefresh = false) => {
-            setError(null);
-            if (isRefresh) {
-                setIsRefreshing(true);
-            }
-            try {
-                const issues = await getTasks();
-                setTasks(issues.map(mapIssueToTask));
-            } catch (err) {
-                setError(err instanceof Error ? err.message : 'Failed to load tasks.');
-            } finally {
-                if (isRefresh) {
-                    setIsRefreshing(false);
-                }
-            }
-        },
-        [getTasks],
-    );
-
-    useEffect(() => {
-        loadTasks();
-        // Only run once on mount; loadTasks is stable via useCallback deps.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    const { refetch: refetchTasks } = tasksQuery;
+    const handleRefresh = useCallback(async () => {
+        setActionError(null);
+        setIsRefreshing(true);
+        await refetchTasks();
+        setIsRefreshing(false);
+    }, [refetchTasks]);
 
     const assignedTasks = tasks.filter(task => task.status === 'pending' || task.status === 'rejected');
     const overdueTasks = tasks.filter(isTaskOverdue);
@@ -266,30 +234,26 @@ export default function TasksScreen() {
 
     const FILTER_COPY: Record<
         TaskFilter,
-        { subtitle: string; sectionTitle: string; sortOption: string; tasks: Task[] }
+        { subtitle: string; sectionTitle: string; tasks: Task[] }
     > = {
         assigned: {
             subtitle: appString.tasksScreen.subtitleAssigned,
             sectionTitle: appString.tasksScreen.assignedTasksTitle,
-            sortOption: appString.tasksScreen.sortOption,
             tasks: assignedTasks,
         },
         inProgress: {
             subtitle: appString.tasksScreen.subtitleInProgress,
             sectionTitle: appString.tasksScreen.inProgressTasksTitle,
-            sortOption: appString.tasksScreen.sortOption,
             tasks: inProgressTasks,
         },
         completed: {
             subtitle: appString.tasksScreen.subtitleCompleted,
             sectionTitle: appString.tasksScreen.completedTasksTitle,
-            sortOption: appString.tasksScreen.sortOptionCompletedDate,
             tasks: completedTasks,
         },
         overdue: {
             subtitle: appString.tasksScreen.subtitleOverdue,
             sectionTitle: appString.tasksScreen.overdueTasksTitle,
-            sortOption: appString.tasksScreen.sortOptionDueDate,
             tasks: overdueTasks,
         },
     };
@@ -297,31 +261,20 @@ export default function TasksScreen() {
     const greetingName = truncateName(user?.fullName?.trim() || appString.tasksScreen.greetingFallbackName);
     const previewTask = tasks.find(task => task.id === previewTaskId) ?? null;
 
-    const setTaskStatus = (id: string, status: TaskStatus) => {
-        setTasks(prev => prev.map(task => (task.id === id ? { ...task, status } : task)));
-    };
-
+    // Successful mutations write the updated task into the tasks query cache,
+    // so the list re-derives from it without any local bookkeeping here.
     const handleAcceptConfirm = async (etaDate: Date) => {
         if (!acceptTaskId) {
             return;
         }
         try {
-            await acceptTask(acceptTaskId, toCalendarDateString(etaDate));
-            setTasks(prev =>
-                prev.map(task =>
-                    task.id === acceptTaskId
-                        ? {
-                              ...task,
-                              status: 'accepted',
-                              etaDate: formatAssignedDate(etaDate.toISOString()),
-                              etaDateRaw: etaDate.toISOString(),
-                          }
-                        : task,
-                ),
-            );
+            await acceptTaskMutation.mutateAsync({
+                issueId: acceptTaskId,
+                etaDate: toCalendarDateString(etaDate),
+            });
             setAcceptTaskId(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to accept task.');
+            setActionError(err instanceof Error ? err.message : 'Failed to accept task.');
         }
     };
 
@@ -330,11 +283,10 @@ export default function TasksScreen() {
             return;
         }
         try {
-            await rejectTask(rejectTaskId, reason);
-            setTaskStatus(rejectTaskId, 'rejected');
+            await rejectTaskMutation.mutateAsync({ issueId: rejectTaskId, reason });
             setRejectTaskId(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to reject task.');
+            setActionError(err instanceof Error ? err.message : 'Failed to reject task.');
         }
     };
 
@@ -343,24 +295,10 @@ export default function TasksScreen() {
             return;
         }
         try {
-            const resolved = await resolveTask(completeTaskId, photo);
-            setTasks(prev =>
-                prev.map(task =>
-                    task.id === completeTaskId
-                        ? {
-                              ...task,
-                              status: 'resolved',
-                              photoUri: getMediaUrl(completeTaskId, 'after'),
-                              completedAt: resolved.resolved_at
-                                  ? formatDateTime(resolved.resolved_at)
-                                  : formatDateTime(new Date().toISOString()),
-                          }
-                        : task,
-                ),
-            );
+            await resolveTaskMutation.mutateAsync({ issueId: completeTaskId, photo });
             setCompleteTaskId(null);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to complete task.');
+            setActionError(err instanceof Error ? err.message : 'Failed to complete task.');
         }
     };
 
@@ -377,15 +315,17 @@ export default function TasksScreen() {
                 refreshControl={
                     <RefreshControl
                         refreshing={isRefreshing}
-                        onRefresh={() => loadTasks(true)}
+                        onRefresh={handleRefresh}
                         colors={[themeColors.primary]}
                         tintColor={themeColors.primary}
                     />
                 }>
                 <View style={styles.listContent}>
-                    {isFetchingTasks && tasks.length === 0 ? (
-                        <View style={styles.emptyState}>
-                            <ActivityIndicator color={themeColors.primary} />
+                    {tasksQuery.isLoading ? (
+                        <View style={styles.taskList}>
+                            {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
+                                <TaskCardSkeleton key={index} />
+                            ))}
                         </View>
                     ) : error ? (
                         <View style={styles.emptyState}>
@@ -393,7 +333,10 @@ export default function TasksScreen() {
                             <TouchableOpacity
                                 style={styles.retryButton}
                                 activeOpacity={0.8}
-                                onPress={() => loadTasks()}>
+                                onPress={() => {
+                                    setActionError(null);
+                                    refetchTasks();
+                                }}>
                                 <Text style={styles.retryButtonText}>
                                     {appString.tasksScreen.retryButton}
                                 </Text>
@@ -637,31 +580,24 @@ export default function TasksScreen() {
                     <Text style={styles.sectionTitle}>
                         {activeFilterCopy.sectionTitle} ({activeFilterCopy.tasks.length})
                     </Text>
-                    <View style={styles.sortRow}>
-                        <Text style={styles.sortLabel}>{appString.tasksScreen.sortByLabel}</Text>
-                        <View style={styles.sortValueRow}>
-                            <Text style={styles.sortValueText}>{activeFilterCopy.sortOption}</Text>
-                            <Icon name="chevron-down" size={12} color={themeColors.subtitle} />
-                        </View>
-                    </View>
                 </View>
             </Animated.View>
 
             <AcceptTaskModal
                 visible={acceptTaskId !== null}
-                isSubmitting={isAcceptingTask}
+                isSubmitting={acceptTaskMutation.isPending}
                 onClose={() => setAcceptTaskId(null)}
                 onConfirm={handleAcceptConfirm}
             />
             <RejectTaskModal
                 visible={rejectTaskId !== null}
-                isSubmitting={isRejectingTask}
+                isSubmitting={rejectTaskMutation.isPending}
                 onClose={() => setRejectTaskId(null)}
                 onConfirm={handleRejectConfirm}
             />
             <CompleteTaskModal
                 visible={completeTaskId !== null}
-                isSubmitting={isResolvingTask}
+                isSubmitting={resolveTaskMutation.isPending}
                 onClose={() => setCompleteTaskId(null)}
                 onConfirm={handleCompleteConfirm}
             />

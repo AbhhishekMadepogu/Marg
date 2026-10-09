@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Image,
@@ -37,6 +37,16 @@ export default function CompleteTaskModal({
 }: CompleteTaskModalProps) {
     const [photo, setPhoto] = useState<PhotoFile | null>(null);
     const [comment, setComment] = useState('');
+
+    // Covers every dismissal path, not just Cancel/X - including a
+    // successful submit, which the parent closes by flipping `visible`
+    // without going through handleClose.
+    useEffect(() => {
+        if (!visible) {
+            setPhoto(null);
+            setComment('');
+        }
+    }, [visible]);
 
     const handleClose = () => {
         setPhoto(null);

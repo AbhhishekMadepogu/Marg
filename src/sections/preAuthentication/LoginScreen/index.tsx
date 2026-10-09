@@ -14,6 +14,7 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/Feather';
 import LockIcon from '../../../assets/icons/lock';
 import margLogo from '../../../assets/icons/margLogo';
 import { useAuth } from '../../../hooks/useAuth';
@@ -99,6 +100,12 @@ export default function LoginScreen() {
         }
     };
 
+    const handleBackToMobileNumber = () => {
+        setOtpSent(false);
+        setOtp(Array(OTP_LENGTH).fill(''));
+        setApiError(null);
+    };
+
     const handleResendOtp = async () => {
         if (secondsLeft > 0) {
             return;
@@ -176,6 +183,15 @@ export default function LoginScreen() {
                 </ImageBackground>
 
                 <View style={styles.card}>
+                    {otpSent ? (
+                        <TouchableOpacity
+                            style={styles.backButton}
+                            activeOpacity={0.7}
+                            onPress={handleBackToMobileNumber}>
+                            <Icon name="arrow-left" size={moderateScale(22)} color={themeColors.primary} />
+                        </TouchableOpacity>
+                    ) : null}
+
                     <View style={styles.iconCircle}>
                         <LockIcon size={moderateScale(72)} />
                     </View>
@@ -184,6 +200,9 @@ export default function LoginScreen() {
                         <>
                             <Text style={styles.title}>{appString.loginScreen.verifyOtpTitle}</Text>
                             <Text style={styles.subtitle}>{appString.loginScreen.verifyOtpSubtitle}</Text>
+                            <Text style={styles.otpPhoneText}>
+                                {appString.loginScreen.countryCode} {mobileNumber}
+                            </Text>
 
                             <View style={styles.otpRow}>
                                 {otp.map((digit, index) => (

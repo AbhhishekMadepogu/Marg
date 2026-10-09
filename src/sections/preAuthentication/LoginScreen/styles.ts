@@ -79,6 +79,13 @@ export default StyleSheet.create({
         width: WIDTH,
         alignSelf: 'center'
     },
+    backButton: {
+        position: 'absolute',
+        top: moderateScale(16),
+        left: moderateScale(16),
+        zIndex: 1,
+        padding: moderateScale(6),
+    },
     iconCircle: {
         position: 'absolute',
         top: moderateScale(-32),
@@ -103,6 +110,13 @@ export default StyleSheet.create({
         marginTop: moderateScale(8),
         fontSize: moderateScale(14),
         color: colors.subtitle,
+        textAlign: 'center',
+    },
+    otpPhoneText: {
+        marginTop: moderateScale(2),
+        fontSize: moderateScale(15),
+        fontWeight: '800',
+        color: colors.navy,
         textAlign: 'center',
     },
     inputRow: {

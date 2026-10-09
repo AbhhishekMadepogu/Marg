@@ -15,4 +15,6 @@ export const themeColors = {
   warningBg: '#FFF4E1',
   danger: '#EF4444',
   dangerBg: '#FDECEC',
+  skeleton: '#E9ECF5',
+  skeletonHighlight: '#D3D9EA',
 };

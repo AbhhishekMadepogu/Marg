@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -22,6 +22,15 @@ export default function RejectTaskModal({
     onConfirm,
 }: RejectTaskModalProps) {
     const [reason, setReason] = useState('');
+
+    // Covers every dismissal path, not just Cancel/X - including a
+    // successful submit, which the parent closes by flipping `visible`
+    // without going through handleClose.
+    useEffect(() => {
+        if (!visible) {
+            setReason('');
+        }
+    }, [visible]);
 
     const handleClose = () => {
         setReason('');

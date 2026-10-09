@@ -2,6 +2,19 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// react-native-config: maps each build variant to the .env file it should read
+// (project root, one level above /android) and generates the matching
+// BuildConfig fields / resValues, exposed to JS as `Config.<KEY>`.
+project.ext.envConfigFiles = [
+    devDebug: ".env.dev",
+    devRelease: ".env.dev",
+    qaDebug: ".env.qa",
+    qaRelease: ".env.qa",
+    prodDebug: ".env.prod",
+    prodRelease: ".env.prod",
+]
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.
@@ -20,8 +33,8 @@ react {
     /* Variants */
     //   The list of variants to that are debuggable. For those we're going to
     //   skip the bundling of the JS bundle and the assets. Default is "debug", "debugOptimized".
-    //   If you add flavors like lite, prod, etc. you'll have to list your debuggableVariants.
-    // debuggableVariants = ["liteDebug", "liteDebugOptimized", "prodDebug", "prodDebugOptimized"]
+    //   We have dev/qa/prod flavors (see productFlavors below), so list their debug variants here.
+    debuggableVariants = ["devDebug", "qaDebug", "prodDebug"]
 
     /* Bundling */
     //   A list containing the node command and its flags. Default is just 'node'.
@@ -85,6 +98,26 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    buildFeatures {
+        buildConfig true
+    }
+    flavorDimensions "environment"
+    productFlavors {
+        dev {
+            dimension "environment"
+            applicationIdSuffix ".dev"
+            resValue "string", "app_name", "dev-Marg Serve"
+        }
+        qa {
+            dimension "environment"
+            applicationIdSuffix ".qa"
+            resValue "string", "app_name", "qa-Marg Serve"
+        }
+        prod {
+            dimension "environment"
+            resValue "string", "app_name", "Marg Serve"
+        }
+    }
     signingConfigs {
         debug {
             storeFile file('debug.keystore')
@@ -104,6 +137,15 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
         }
+    }
+}
+
+// Rename output APKs from the default "app-<flavor>-<buildType>.apk" to
+// "<flavor>-<buildType>.apk" (prod has no prefix, e.g. dev-release.apk, release.apk).
+android.applicationVariants.all { variant ->
+    variant.outputs.all { output ->
+        def prefix = variant.flavorName == "prod" ? "" : "${variant.flavorName}-"
+        outputFileName = "${prefix}${variant.buildType.name}.apk"
     }
 }
 

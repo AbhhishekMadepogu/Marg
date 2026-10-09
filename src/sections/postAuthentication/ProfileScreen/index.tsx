@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -14,34 +14,19 @@ import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import Icon from 'react-native-vector-icons/Feather';
 import MCIcon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Hero from '../../../components/Hero';
+import Skeleton from '../../../components/Skeleton';
 import { useAuth } from '../../../hooks/useAuth';
 import type { PhotoFile } from '../../../hooks/useIssue';
-import { useProfile } from '../../../hooks/useProfile';
+import { useUploadWorkerPhotoMutation, useWorkerPhotoQuery } from '../../../hooks/useProfile';
 import { appString } from '../../../utility/constants/appString';
 import { themeColors } from '../../../utility/constants/themeColors';
 import styles from './styles';
 
 export default function ProfileScreen() {
     const { user, logout } = useAuth();
-    const { isUploadingPhoto, isFetchingPhoto, uploadWorkerPhoto, getWorkerPhoto } = useProfile();
-    const [photoUri, setPhotoUri] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (!user?.id) {
-            return;
-        }
-        let cancelled = false;
-        getWorkerPhoto(user.id)
-            .then(dataUri => {
-                if (!cancelled) {
-                    setPhotoUri(dataUri);
-                }
-            })
-            .catch(() => {});
-        return () => {
-            cancelled = true;
-        };
-    }, [user?.id, getWorkerPhoto]);
+    const photoQuery = useWorkerPhotoQuery(user?.id);
+    const uploadPhotoMutation = useUploadWorkerPhotoMutation();
+    const photoUri = photoQuery.data ?? null;
 
     const requestCameraPermission = async () => {
         if (Platform.OS !== 'android') {
@@ -75,8 +60,7 @@ export default function ProfileScreen() {
 
     const uploadPhoto = async (photo: PhotoFile) => {
         try {
-            await uploadWorkerPhoto(photo);
-            setPhotoUri(photo.uri);
+            await uploadPhotoMutation.mutateAsync(photo);
         } catch (err) {
             Alert.alert(
                 appString.profileScreen.photoUploadFailedTitle,
@@ -195,13 +179,15 @@ export default function ProfileScreen() {
                         activeOpacity={0.8}
                         onPress={handleChangePhoto}>
                         <View style={styles.avatarCircle}>
-                            {photoUri ? (
+                            {photoQuery.isLoading ? (
+                                <Skeleton width="100%" height="100%" borderRadius={0} />
+                            ) : photoUri ? (
                                 <Image source={{ uri: photoUri }} style={styles.avatarImage} />
                             ) : (
                                 <Icon name="user" size={28} color={themeColors.primary} />
                             )}
                         </View>
-                        {isUploadingPhoto || isFetchingPhoto ? (
+                        {uploadPhotoMutation.isPending ? (
                             <View style={styles.avatarLoadingOverlay}>
                                 <ActivityIndicator color={themeColors.white} size="small" />
                             </View>
